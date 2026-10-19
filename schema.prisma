@@ -1,0 +1,100 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  phone     String   @unique
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  price       Int // in TZS cents
+  description String?
+  imageUrl    String?
+  stock       Int      @default(100)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+enum OrderStatus {
+  PENDING
+  PACKING
+  EN_ROUTE
+  ARRIVED
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(PENDING)
+  total           Int
+  // address snapshot
+  region          String?
+  district        String?
+  street          String?
+  campusBlock     String?
+  campusRoom      Int?
+  isCampus        Boolean     @default(false)
+  customerPhone   String
+  // ledger
+  grossSales      Int
+  netRevenue      Int
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  auditLogs       AuditLog[]
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  qty       Int
+  price     Int
+}
+
+model Product {
+  // relation added below duplicate fix in code - prisma needs it here
+  orderItems OrderItem[]
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  fromStatus String?
+  toStatus   String
+  changedBy  String? // admin id
+  createdAt DateTime @default(now())
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}
